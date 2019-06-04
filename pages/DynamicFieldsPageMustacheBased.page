@@ -1,0 +1,108 @@
+<apex:page controller="DynamicFieldsControllerMustacheBased" applyHtmlTag="false" applyBodyTag="false" sidebar="false" standardStylesheets="false" showHeader="false" docType="html-5.0">
+<apex:stylesheet value="{!URLFOR($Resource.FrontendLib, 'bootstrap-4.3.1/css/bootstrap.min.css')}" />
+    <style type="text/css">
+    input[type=checkbox], input[type=radio] {
+         -webkit-transform: scale(0.40) !important;
+    }
+    label{
+        font-weight:bolder;
+    }
+    body{
+        background-color:#ebf5ff;
+    }
+    
+    </style>
+<apex:form styleClass="form-horizontal">
+    <div class="container">     
+        <h2>Contact Details</h2>
+        <div id="target">            
+        </div>
+        <div class="form-group">
+            <div class="offset-sm-4 col-sm-3">
+                <button type="button" class="btn btn-primary" id="theButton">Save</button>
+            </div>
+        </div>
+    </div>
+</apex:form>
+<apex:includeScript value="{!URLFOR($Resource.FrontendLib, 'jquery-3.4.0.min.js')}" />
+<apex:includeScript value="{!URLFOR($Resource.FrontendLib, 'mustache.min.js')}" />   
+<apex:includeScript value="{!URLFOR($Resource.FrontendLib, 'bootstrap-4.3.1/js/bootstrap.min.js')}" />
+<script type="x-tmpl-mustache" id="templ-checkbox">
+         <div class="form-group">
+            <label class="control-label col-sm-2" for="newCbox">{{apiName}}</label>
+            <div class="col-sm-1">
+               <input type="checkbox" id="newCbox" data-id="{{id}}" class="form-control" value="{{value}}">
+                </input> 
+             </div>
+        </div>    
+</script>    
+<script type="x-tmpl-mustache" id="templ-textArea">
+         <div class="form-group">
+            <label class="control-label col-sm-2" for="tArea">{{apiName}}</label>
+            <div class="col-sm-10">
+                <textArea  id="tArea" data-id="{{id}}" class="form-control" rows="5" cols="3" value="{{value}}">
+                {{value}}</textArea> 
+             </div>
+        </div>  
+</script>    
+<script type="x-tmpl-mustache" id="templ-number">
+         <div class="form-group">
+            <label class="control-label col-sm-2" for="tText">{{apiName}}</label>
+            <div class="col-sm-10">
+               <input type="text" id="tText" data-id="{{id}}" class="form-control" value="{{value}}">
+                </input> 
+             </div>
+        </div>      
+</script>        
+<script>
+    $(document).ready(function(){
+        
+        Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.DynamicFieldsControllerMustacheBased.getContactData}','{!$CurrentPage.parameters.Id}',
+        function(result, event){
+                console.log('event = ' + event);
+                if(event.status){
+                        console.log('Result JSON = ' + result);
+                        var template, rendered;
+                        var data = $.parseJSON(result);
+                        $.each(data, function(i,item){
+                            //console.log('index = ' + i + '*data=' + item.fieldType);
+                            if(item.fieldType=='Checkbox'){
+                                template = $('#templ-checkbox').html();             
+                            }else if(item.fieldType=='TextArea'){
+                                template = $('#templ-textArea').html();             
+                            }else {
+                                template = $('#templ-number').html();               
+                            } 
+                            rendered = Mustache.render(template,item);
+                            $('#target').append(rendered);
+                        });
+                 }else{
+                     console.log('Service timeout...');
+                 }
+             }, 
+            {escape: false,timeout:2000}
+            );  
+            
+        $("#theButton").click(function(){
+            console.log("Save button clicked...");
+            var fieldValueList = [];
+            $("[data-id]").each(function(i){
+                console.log('Val = ' + i + " " + $(this).val() + 'Data = ' + " " + $(this).data("id"));
+                var fieldValue = {};
+                fieldValue.id = $(this).data("id");
+                fieldValue.value = $(this).val();
+                fieldValueList.push(fieldValue);
+            });
+            Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.DynamicFieldsControllerMustacheBased.save}',fieldValueList,
+            function(result, event){
+                console.log('Save success');
+               
+             }, 
+            {escape: false}
+            );  
+            
+            
+        });
+    });
+</script>
+</apex:page>
